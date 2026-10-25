@@ -24,6 +24,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// FUNGSI UTAMA SINKRONISASI REALTIME FIREBASE (HP & LAPTOP)
+window.initFirebaseRealtime = function() {
+    if (window.fbDB && window.fbRef && window.fbOnValue) {
+        const liveRef = window.fbRef(window.fbDB, 'live_bracket');
+        window.fbOnValue(liveRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                tournamentData = data;
+                if (tournamentData.teams && tournamentData.teams.length > 0) {
+                    const teamsInput = document.getElementById('teamsInput');
+                    if (teamsInput) teamsInput.value = tournamentData.teams.join('\n');
+                }
+                if (tournamentData.format) {
+                    const formatSelect = document.getElementById('tournamentFormat');
+                    if (formatSelect) formatSelect.value = tournamentData.format;
+                }
+                renderBracket();
+            }
+        });
+    }
+};
+
 function initEvents() {
     const btnAdminAuth = document.getElementById('btnAdminAuth');
     const btnCloseLoginModal = document.getElementById('btnCloseLoginModal');
@@ -162,7 +184,7 @@ function generateBracket() {
     renderBracket();
 }
 
-// SINGLE ELIMINATION (BYE DIGUNAKAN HANYA JIKA JUMLAH TIM GANJIL/TIDAK PAS)
+// SINGLE ELIMINATION (DENGAN AKSES EDIT PENUH BYE)
 function generateSingleEliminationTree(teams) {
     let numTeams = teams.length;
     let powerOfTwo = Math.pow(2, Math.ceil(Math.log2(numTeams)));
@@ -223,9 +245,8 @@ function generateSingleEliminationTree(teams) {
     }
 }
 
-// LOGIKA MURNI DOUBLE ELIMINATION MPL ID PLAYOFFS (TANPA BYE)
+// LOGIKA MURNI DOUBLE ELIMINATION MPL ID PLAYOFFS (TANPA SLOT BYE)
 function generateMPLStyleBracket(teams) {
-    // Mengambil 6 tim teratas (Format khas MPL ID Playoff: Top 6)
     let t1 = teams[0] || "Tim 1 (Seed 3)";
     let t2 = teams[1] || "Tim 2 (Seed 4)";
     let t3 = teams[2] || "Tim 3 (Seed 1 / Upper)";
@@ -234,24 +255,20 @@ function generateMPLStyleBracket(teams) {
     let t6 = teams[5] || "Tim 6 (Seed 6)";
 
     // 1. UPPER BRACKET
-    // Play-in (Round 1)
     let playInMatches = [
         { id: 1, team1: t1, team2: t6, score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false },
         { id: 2, team1: t2, team2: t5, score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
 
-    // Upper Semi Finals
     let upperSemiFinals = [
         { id: 3, team1: t3, team2: "Pemenang Match #1", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false },
         { id: 4, team1: t4, team2: "Pemenang Match #2", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
 
-    // Upper Final
     let upperFinal = [
         { id: 5, team1: "Pemenang Match #3", team2: "Pemenang Match #4", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
 
-    // Grand Final
     let grandFinal = [
         { id: 8, team1: "Pemenang Upper Final", team2: "Pemenang Lower Final", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
@@ -263,7 +280,7 @@ function generateMPLStyleBracket(teams) {
         { title: "GRAND FINAL", matches: grandFinal }
     ];
 
-    // 2. LOWER BRACKET (MPL ID PLAYOFFS)
+    // 2. LOWER BRACKET
     let lowerRound1 = [
         { id: 6, team1: "Kalah Match #3", team2: "Kalah Match #4", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
@@ -377,7 +394,7 @@ function renderBracket() {
     // UPPER BRACKET
     html += `<div>`;
     if (tournamentData.format === 'double_elimination') {
-        html += `<div class="bracket-section-title"><i class="fa-solid fa-angles-up"></i> UPPER BRACKET </div>`;
+        html += `<div class="bracket-section-title"><i class="fa-solid fa-angles-up"></i> UPPER BRACKET (MPL PLAYOFFS)</div>`;
     } else {
         html += `<div class="bracket-section-title"><i class="fa-solid fa-trophy"></i> BAGAN PERTANDINGAN</div>`;
     }
@@ -491,7 +508,6 @@ function renderGroupMatchListVertical(matches) {
     return html;
 }
 
-// RENDER CARD DENGAN DUKUNGAN INTERAKSI LENGKAP
 function renderTreeCanvas(containerId, rounds) {
     let html = `<div id="${containerId}" class="tree-canvas-container">`;
     html += `<svg class="bracket-svg-layer" id="${containerId}_svg"></svg>`;
@@ -611,7 +627,7 @@ function drawTreeSVG(containerId, roundsData) {
 }
 
 // ==========================================
-// MODAL SKOR & UPDATE DATA MPL BRACKET
+// MODAL SKOR & SINKRONISASI FIREBASE
 // ==========================================
 window.openScoreModal = function(matchId) {
     if (!isAdminLoggedIn) return;
@@ -684,7 +700,7 @@ function saveScoreFromModal() {
             currentMatch.loser = null;
         }
 
-        // PROPAGASI HASIL MATCH KHUSUS ALUR PLAYOFFS MPL ID
+        // PROPAGASI HASIL MATCH ALUR PLAYOFFS MPL ID
         if (tournamentData.format === 'double_elimination') {
             if (matchId === 1) {
                 if (tournamentData.upperRounds[1]) tournamentData.upperRounds[1].matches[0].team2 = currentMatch.winner || "Pemenang Match #1";
@@ -725,10 +741,16 @@ function saveScoreFromModal() {
 }
 
 // ==========================================
-// STORAGE & EXPORT
+// STORAGE & REALTIME SINKRONISASI
 // ==========================================
 function saveLocalData() {
     localStorage.setItem('mlbb_bracket_data', JSON.stringify(tournamentData));
+
+    // Kirim update langsung ke Firebase Realtime Database
+    if (window.fbDB && window.fbRef && window.fbSet) {
+        const liveRef = window.fbRef(window.fbDB, 'live_bracket');
+        window.fbSet(liveRef, tournamentData);
+    }
 }
 
 function loadLocalData() {
@@ -737,10 +759,12 @@ function loadLocalData() {
         try {
             tournamentData = JSON.parse(saved);
             if (tournamentData.teams && tournamentData.teams.length > 0) {
-                document.getElementById('teamsInput').value = tournamentData.teams.join('\n');
+                const teamsInput = document.getElementById('teamsInput');
+                if (teamsInput) teamsInput.value = tournamentData.teams.join('\n');
             }
             if (tournamentData.format) {
-                document.getElementById('tournamentFormat').value = tournamentData.format;
+                const formatSelect = document.getElementById('tournamentFormat');
+                if (formatSelect) formatSelect.value = tournamentData.format;
             }
             renderBracket();
         } catch (e) {

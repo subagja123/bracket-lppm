@@ -6,7 +6,7 @@
     <title>MLBB Tournament Manager - E-SPORT LPPM RI</title>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts (Poppins & Rajdhani) -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -43,7 +43,7 @@
                     <label for="tournamentFormat">Format Turnamen:</label>
                     <select id="tournamentFormat" disabled>
                         <option value="single_elimination">Single Elimination (Gugur)</option>
-                        <option value="double_elimination">Double Elimination</option>
+                        <option value="double_elimination">Double Elimination (MPL ID)</option>
                         <option value="round_robin">Round Robin (Fase Grup)</option>
                     </select>
                 </div>
@@ -124,6 +124,32 @@
             </div>
         </div>
     </div>
+
+    <!-- FIREBASE SDK (REALTIME DATABASE INTEGRATION) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Konfigurasi Firebase Realtime Database
+        const firebaseConfig = {
+            databaseURL: "https://lppmri-e-sport-default-rtdb.asia-southeast1.firebasedatabase.app/"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Global Window Binding agar script.js dapat mengakses fungsi Firebase
+        window.fbDB = db;
+        window.fbRef = ref;
+        window.fbSet = set;
+        window.fbPush = push;
+        window.fbOnValue = onValue;
+
+        // Trigger listener real-time otomatis saat Firebase terhubung
+        if (window.initFirebaseRealtime) {
+            window.initFirebaseRealtime();
+        }
+    </script>
 
     <script src="script.js"></script>
 </body>
