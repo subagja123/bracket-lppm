@@ -13,14 +13,14 @@ let tournamentData = {
 };
 
 // ==========================================
-// EVENT LISTENER UTAMA & REALTIME FIREBASE
+// EVENT LISTENER UTAMA & FIREBASE SYNC
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     initEvents();
     updateAdminUI();
-    loadLocalData(); // Memuat data lokal awal
+    loadLocalData();
 
-    // Jalankan listener Firebase Realtime untuk HP & Laptop
+    // Jalankan pemantau Firebase Realtime
     setupFirebaseListener();
 
     window.addEventListener('resize', () => {
@@ -28,23 +28,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// FUNGSI SINKRONISASI REALTIME UTAMA (HP & LAPTOP)
 function setupFirebaseListener() {
+    // Cek secara berkala sampai SDK Firebase siap
     const checkFirebase = setInterval(() => {
         if (window.fbDB && window.fbRef && window.fbOnValue) {
             clearInterval(checkFirebase);
             const liveRef = window.fbRef(window.fbDB, 'live_bracket');
             
-            // Listen setiap ada perubahan di Firebase dari perangkat manapun
+            // Listen setiap ada perubahan di Firebase (Realtime dari perangkat manapun)
             window.fbOnValue(liveRef, (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     tournamentData = data;
                     
-                    // Simpan juga ke local storage perangkat agar tetap offline-friendly
+                    // Simpan ke local storage sebagai backup
                     localStorage.setItem('mlbb_bracket_data', JSON.stringify(tournamentData));
                     
-                    // Update tampilan UI (Form & Bagan)
+                    // Update tampilan input jika sedang dibuka
                     if (tournamentData.teams && tournamentData.teams.length > 0) {
                         const teamsInput = document.getElementById('teamsInput');
                         if (teamsInput) teamsInput.value = tournamentData.teams.join('\n');
@@ -53,11 +53,14 @@ function setupFirebaseListener() {
                         const formatSelect = document.getElementById('tournamentFormat');
                         if (formatSelect) formatSelect.value = tournamentData.format;
                     }
+                    
                     renderBracket();
                 }
+            }, (error) => {
+                console.error("Firebase Sync Error:", error);
             });
         }
-    }, 300); // Cek ketersediaan SDK Firebase setiap 300ms
+    }, 200);
 }
 
 function initEvents() {
@@ -195,11 +198,10 @@ function generateBracket() {
         generateSingleEliminationTree(teams);
     }
 
-    saveLocalData(); // Ini otomatis akan mendorong (push) data baru ke Firebase
+    saveLocalData();
     renderBracket();
 }
 
-// SINGLE ELIMINATION (BYE TETAP BISA DIEDIT & PROPAGASI BENAR)
 function generateSingleEliminationTree(teams) {
     let numTeams = teams.length;
     let powerOfTwo = Math.pow(2, Math.ceil(Math.log2(numTeams)));
@@ -260,7 +262,6 @@ function generateSingleEliminationTree(teams) {
     }
 }
 
-// LOGIKA PRESISI DOUBLE ELIMINATION MPL ID PLAYOFFS (6 TIM TOP PLAYOFFS)
 function generateMPLStyleBracket(teams) {
     let t1 = teams[0] || "Tim 3 (Seed 3)";
     let t2 = teams[1] || "Tim 4 (Seed 4)";
@@ -269,7 +270,6 @@ function generateMPLStyleBracket(teams) {
     let t5 = teams[4] || "Tim 5 (Seed 5)";
     let t6 = teams[5] || "Tim 6 (Seed 6)";
 
-    // 1. UPPER BRACKET
     let playInMatches = [
         { id: 1, team1: t1, team2: t6, score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false },
         { id: 2, team1: t2, team2: t5, score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
@@ -290,7 +290,6 @@ function generateMPLStyleBracket(teams) {
         { title: "UPPER FINAL", matches: upperFinal }
     ];
 
-    // 2. LOWER BRACKET
     let lowerRound1 = [
         { id: 6, team1: "Kalah Match #3", team2: "Kalah Match #4", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
     ];
@@ -304,7 +303,6 @@ function generateMPLStyleBracket(teams) {
         { title: "LOWER FINAL", matches: lowerFinal }
     ];
 
-    // 3. GRAND FINAL
     tournamentData.grandFinal = {
         title: "GRAND FINAL",
         match: { id: 8, team1: "Pemenang Upper Final", team2: "Pemenang Lower Final", score1: 0, score2: 0, winner: null, loser: null, isByeMatch: false }
@@ -760,7 +758,6 @@ function saveScoreFromModal() {
             currentMatch.loser = null;
         }
 
-        // PROPAGASI HASIL MATCH ALUR PLAYOFFS MPL ID
         if (tournamentData.format === 'double_elimination') {
             if (matchId === 1) {
                 if (tournamentData.upperRounds[1]) tournamentData.upperRounds[1].matches[0].team2 = currentMatch.winner || "Pemenang Match #1";
@@ -781,7 +778,6 @@ function saveScoreFromModal() {
                 if (tournamentData.grandFinal) tournamentData.grandFinal.match.team2 = currentMatch.winner || "Pemenang Lower Final";
             }
         } else {
-            // Propagasi Single Elimination Biasa
             if (isUpper && roundIndex + 1 < tournamentData.upperRounds.length) {
                 let nextMatches = tournamentData.upperRounds[roundIndex + 1].matches;
                 let nextMatchIndex = Math.floor(matchIndex / 2);
@@ -801,12 +797,12 @@ function saveScoreFromModal() {
 }
 
 // ==========================================
-// STORAGE & REALTIME SINKRONISASI
+// STORAGE & SINKRONISASI PUSH FIREBASE
 // ==========================================
 function saveLocalData() {
     localStorage.setItem('mlbb_bracket_data', JSON.stringify(tournamentData));
 
-    // Kirim data langsung ke Firebase Realtime Database
+    // Kirim langsung data terbaru ke Firebase
     if (window.fbDB && window.fbRef && window.fbSet) {
         const liveRef = window.fbRef(window.fbDB, 'live_bracket');
         window.fbSet(liveRef, tournamentData);
