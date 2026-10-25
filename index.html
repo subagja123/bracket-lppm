@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLBB Tournament Manager - E-SPORT LPPM RI</title>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Poppins & Rajdhani) -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Rajdhani:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NAVBAR HEADER -->
+    <header class="app-header">
+        <div class="logo-container">
+            <img src="logo.jpg" alt="Logo Turnamen" class="header-logo-img" onerror="this.style.display='none'">
+            <h2>E-SPORT <span>LPPM RI</span></h2>
+        </div>
+        <div class="header-actions">
+            <button id="btnAdminAuth" class="btn btn-outline">
+                <i class="fa-solid fa-user-shield"></i> <span id="adminAuthText">Login Admin</span>
+            </button>
+            <button id="btnExport" class="btn btn-secondary">
+                <i class="fa-solid fa-download"></i> Export Data
+            </button>
+            <button id="btnArchive" class="btn btn-danger">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Arsipkan
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="main-layout">
+        
+        <!-- PANEL KIRI: INPUT DATA TIM & PENGATURAN -->
+        <aside class="control-panel">
+            <div class="panel-card">
+                <h3><i class="fa-solid fa-sliders"></i> Pengaturan Turnamen</h3>
+                
+                <div class="form-group">
+                    <label for="tournamentFormat">Format Turnamen:</label>
+                    <select id="tournamentFormat" disabled>
+                        <option value="single_elimination">Single Elimination (Gugur)</option>
+                        <option value="double_elimination">Double Elimination</option>
+                        <option value="round_robin">Round Robin (Fase Grup)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-with-btn">
+                        <label for="teamsInput">Daftar Tim (1 tim per baris):</label>
+                        <button id="btnShuffleTeams" class="btn-sm" disabled title="Acak urutan tim">
+                            <i class="fa-solid fa-shuffle"></i> Acak
+                        </button>
+                    </div>
+                    <textarea id="teamsInput" rows="10" placeholder="Masukkan nama tim di sini...&#10;Contoh:&#10;EVOS Esports&#10;RRQ Hoshi&#10;ONIC Esports&#10;Alter Ego" disabled></textarea>
+                </div>
+
+                <button id="btnGenerate" class="btn btn-primary btn-block" disabled>
+                    <i class="fa-solid fa-diagram-project"></i> Generate Bagan
+                </button>
+            </div>
+        </aside>
+
+        <!-- PANEL KANAN: AREA RENDER BAGAN & KLASEMEN -->
+        <section class="bracket-display-area">
+            <div id="bracketContainer" class="bracket-container-root">
+                <div class="empty-state">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <p>Silakan login admin dan klik "Generate Bagan" untuk membuat skema pertandingan.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: LOGIN ADMIN -->
+    <div id="loginModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-lock"></i> Autentikasi Admin</h3>
+                <button id="btnCloseLoginModal" class="btn-close">&times;</button>
+            </div>
+            <form id="adminLoginForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="adminPassword">Password Admin:</label>
+                        <input type="password" id="adminPassword" placeholder="Masukkan password..." required>
+                        <small id="loginError" class="text-error hidden">Password salah! (Password default: 2528)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: EDIT SKOR MATCH -->
+    <div id="scoreModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Input / Edit Skor Match</h3>
+                <button id="btnCloseScoreModal" class="btn-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="modalMatchId">
+                <div class="score-input-grid">
+                    <div class="team-score-box">
+                        <span id="modalTeam1Name" class="team-label">Tim 1</span>
+                        <input type="number" id="scoreTeam1" min="0" value="0">
+                    </div>
+                    <div class="vs-badge">VS</div>
+                    <div class="team-score-box">
+                        <span id="modalTeam2Name" class="team-label">Tim 2</span>
+                        <input type="number" id="scoreTeam2" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSaveScore" class="btn btn-primary btn-block">Simpan Hasil</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
